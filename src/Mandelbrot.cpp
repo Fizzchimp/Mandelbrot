@@ -1,3 +1,7 @@
+#include <iostream>
+#include <memory>
+#include <cmath>
+
 #define GLEW_STATIC
 #include "GL/glew.h"
 #include "GLFW/glfw3.h"
@@ -14,11 +18,6 @@
 #include "maths/vec2.h"
 
 
-// Request NVIDIA high-performance GPU on hybrid systems
-extern "C" {
-    __declspec(dllexport) unsigned long NvOptimusEnablement = 1;
-}
-
 class PrettyEngine
 {
 public:
@@ -29,7 +28,7 @@ public:
         // Initialize the library
         if (!glfwInit())
         {
-            __debugbreak();
+            std::cout << "Failed to initialise glfw\n";
         }
 
         // Specify the version required
@@ -48,7 +47,7 @@ public:
         // Check if window was creates succesfully
         if (!window)
         {
-            __debugbreak();
+            std::cout << "Failed to create glfw window\n";
         }
 
         // Make the window's context current
@@ -59,7 +58,6 @@ public:
         if (glewInit() != GLEW_OK)
         {
             std::cout << "Failed to initialise glew\n";
-            __debugbreak();
         }
 
 

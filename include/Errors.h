@@ -5,7 +5,7 @@
 
 #define GLCALL(func) clearErrors();\
 	func;\
-	if (!logCall(#func, __FILE__, __LINE__)) {__debugbreak();}
+	if (!logCall(#func, __FILE__, __LINE__)) {}
 
 
 void clearErrors();

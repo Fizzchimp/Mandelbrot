@@ -49,11 +49,10 @@ unsigned int Shader::compileShader(unsigned int type, const std::string& source)
 		int length;
 		glGetShaderiv(id, GL_INFO_LOG_LENGTH, &length);
 
-		char* message = (char*)_malloca(length * sizeof(char));
+		char* message = (char*) alloca(length * sizeof(char));
 		glGetShaderInfoLog(id, length, &length, message);
 		std::cout << "Failed to compile " << (type == GL_VERTEX_SHADER ? "vertex" : "fragment") << " shader!" << std::endl;
 		std::cout << message << std::endl;
-		__debugbreak();
 
 		glDeleteShader(id);
 	}
@@ -68,7 +67,6 @@ int Shader::getUniform(const char* name) const
 	if (location == -1)
 	{
 		std::cout << "Uniform not found: " << name << std::endl;
-		__debugbreak();
 	}
 	uniformCache[name] = location;
 	return location;
