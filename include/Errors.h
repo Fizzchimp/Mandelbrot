@@ -1,12 +1,18 @@
 #pragma once
 
 #include <iostream>
+// #include <stdexcept>
+#include <cassert>
 #include <GL/glew.h>
 
+
+#ifdef NDEBUG
+#define GLCALL(func); func;
+#else
 #define GLCALL(func) clearErrors();\
 	func;\
-	if (!logCall(#func, __FILE__, __LINE__)) {}
-
+	assert(logCall(#func, __FILE__, __LINE__));
+#endif
 
 void clearErrors();
 
