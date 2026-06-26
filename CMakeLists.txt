@@ -42,6 +42,7 @@ set(IMGUI_SOURCES
 # Create the exectuable target and link all source files
 add_executable(${PROJECT_NAME}
     src/Mandelbrot.cpp
+    src/ContextManager.cpp
     src/Errors.cpp
     src/Renderer.cpp
     src/Shader.cpp
