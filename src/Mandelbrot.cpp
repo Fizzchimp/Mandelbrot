@@ -1,66 +1,29 @@
 #include <iostream>
-#include <memory>
 #include <cmath>
 
 #define GLEW_STATIC
 #include "GL/glew.h"
 #include "GLFW/glfw3.h"
 
-#include "imgui/imgui.h"
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_opengl3.h"
 
+#include "ContextManager.h"
+#include "Errors.h"
 #include "Shader.h"
 #include "Renderer.h"
-#include "Errors.h"
 
-#include "maths/mat2.h"
-#include "maths/vec2.h"
+#include "mat2.h"
+#include "vec2.h"
 
 
 class PrettyEngine
 {
 public:
-    PrettyEngine(int inpWidth, int inpHeight)
-		: width(inpWidth), height(inpHeight)
+    PrettyEngine(int inputWidth, int inputHeight)
+		: contextManager(inputWidth, inputHeight), shader(Shader("res/vertex.glsl", "res/mandelfrag.glsl")), renderer(Renderer())
     {
-
-        // Initialize the library
-        if (!glfwInit())
-        {
-            std::cout << "Failed to initialise glfw\n";
-        }
-
-        // Specify the version required
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-
-        // Specify to use the core profile
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-        // Create a windowed mode window and its OpenGL context
-        glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
-        window = glfwCreateWindow(width, height, "Mandelbrot", nullptr, nullptr);
-        glfwGetWindowSize(window, &width, &height);
-
-
-        // Check if window was creates succesfully
-        if (!window)
-        {
-            std::cout << "Failed to create glfw window\n";
-        }
-
-        // Make the window's context current
-        glfwMakeContextCurrent(window);
-
-
-        // Initialise GLEW
-        if (glewInit() != GLEW_OK)
-        {
-            std::cout << "Failed to initialise glew\n";
-        }
-
-
         // Initialise ImGui
         ImGui::CreateContext();
         ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -73,21 +36,11 @@ public:
         style.GrabRounding = 3.0f;
 
 
-        // Display the GLEW version to the console
-        std::cout << glGetString(GL_VERSION) << "\n";
-
-
         // Sets the projection matrix based on the window dimensions
         setProjection(projection, width, height);
 
-        // Initialse and bind the Shader Object
-        shader = std::make_unique<Shader>("res/vertex.glsl", "res/mandelfrag.glsl");
-        shader->bind();
-
-        // Initialse Renderer Object
-        renderer = std::make_unique<Renderer>();
-
-
+        // Bind the Shader Object
+        shader.bind();
 
         // Set a reference to this object in the window
         glfwSetWindowUserPointer(window, this);
@@ -103,19 +56,10 @@ public:
 
     ~PrettyEngine()
     {
-
-        // Destroy Renderer and Shader objects
-        renderer = nullptr;
-		shader = nullptr;
-
         // Cleanup imgui
         ImGui_ImplOpenGL3_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
-
-        // Cleanup GLFW
-        glfwDestroyWindow(window);
-        glfwTerminate();
     }
 
     void runEngine()
@@ -127,14 +71,13 @@ public:
 
             getPositionOnComplexPlane();
 
+            shader.setUniform1i("u_maxIterations", maxIterations);
+            shader.setUniform1f("u_brightness", brightness);
+            shader.setUniform1f("u_zoom", zoom);
+            shader.setUniformMat2f("u_MVP", projection);
+            shader.setUniformVec2f("u_center", center);
 
-            shader->setUniform1i("u_maxIterations", maxIterations);
-            shader->setUniform1f("u_brightness", brightness);
-            shader->setUniform1f("u_zoom", zoom);
-            shader->setUniformMat2f("u_MVP", projection);
-            shader->setUniformVec2f("u_center", center);
-
-            renderer->draw();
+            renderer.draw();
 
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();
@@ -146,12 +89,21 @@ public:
             ImGui::Text("Zoom: %.4f", zoom);
             posFormat = " %." + std::to_string(int(std::log10(1.0f / zoom)) + 3) + "f"; // Update the format based on zoom
             ImGui::Text(("Position:" + posFormat + posFormat).c_str(), complexPlanePos.x, complexPlanePos.y);
+            if (ImGui::Button("Reset View"))
+            {
+                center.x = -0.5f;
+                center.y =  0.0f;
+                zoom = 2.0f;
+                maxIterations = 50;
+                brightness = 50.0f;
+            }
             ImGui::End();
 
             ImGui::SetNextWindowPos(ImVec2(width - 90, 5), ImGuiCond_Always);
             ImGui::Begin("FPS", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
             ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
             ImGui::End();
+
 
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -161,29 +113,35 @@ public:
     }
 
 private:
-	int width, height; // Width and height of the window
-    GLFWwindow* window; // Pointer to the GLFW window
+    ContextManager contextManager; // Object to initialise GLFW and GLEW before anything else
 
-    std::unique_ptr<Renderer> renderer; // Renderer class
-    std::unique_ptr<Shader> shader; // Shader class
+    GLFWwindow*& window = contextManager.window; // Reference to the GLFW window pointer (owned by contextManager)
 
-    mat2<float> projection; // Projection matrix for the shader (Based on the window dimensions)
+    int& width = contextManager.width, height = contextManager.height; // Reference to the window dimensions (owned by contextManager)
 
 
-	vec2<float> center = vec2<float>(-0.5f, 0.0f); // The position of the center of the screen on the complex plane
-	vec2<float> mousePos; // Position of the mouse on the screen
-	vec2<float> complexPlanePos; // Position of the mouse on the complex plane
+    Shader shader; // Shader object
+    Renderer renderer; // Renderer object
+
+    mat2 projection; // Projection matrix for the shader (Based on the window dimensions)
+
+
+	vec2 center = vec2(-0.5f, 0.0f); // The position of the center of the screen on the complex plane
+	vec2 mousePos; // Position of the mouse on the screen
+	vec2 complexPlanePos; // Position of the mouse on the complex plane
 
 	float zoom = 2.0f; // Zoom level of the complex plane
     int maxIterations = 50; // Maximum number of iterations the fragment shader is allowed to calculate
-    float brightness= 60.0f; // Brightness of the fractal (Changes based on the zoom)
+    float brightness= 50.0f; // Brightness of the fractal (Changes based on the zoom)
     
     std::string posFormat = "%.4f"; // Imgui format for displaying complexPlanePos
 
+
+    
     //// Display maintenance
 
     // Sets the projection matrix based on the width and the height of the window
-    void setProjection(mat2<float>& projection, int width, int height)
+    void setProjection(mat2& projection, int width, int height)
     {
         if (width > height)
         {
@@ -217,8 +175,7 @@ private:
     // Mouse movement callback function
     static void mouseMovement(GLFWwindow* window, double xpos, double ypos)
     {
-		PrettyEngine* engine = static_cast<PrettyEngine*>(glfwGetWindowUserPointer(window));
-
+		PrettyEngine* engine = (PrettyEngine*)glfwGetWindowUserPointer(window);
         ImGuiIO& io = ImGui::GetIO();
         io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);
         io.AddMousePosEvent((float)xpos, (float)ypos);
@@ -239,7 +196,7 @@ private:
     // Scroll wheel callback function
     static void scrollWheel(GLFWwindow* window, double xoffset, double yoffset)
     {
-		PrettyEngine* engine = static_cast<PrettyEngine*>(glfwGetWindowUserPointer(window));
+		PrettyEngine* engine = (PrettyEngine*)glfwGetWindowUserPointer(window);
 
         engine->zoom *= std::pow(1.1, -yoffset);
 
@@ -260,7 +217,7 @@ private:
     // Resize window callback function
     static void resizeWindow(GLFWwindow* window, int newWidth, int newHeight)
     {
-		PrettyEngine* engine = static_cast<PrettyEngine*>(glfwGetWindowUserPointer(window));
+		PrettyEngine* engine = (PrettyEngine*)glfwGetWindowUserPointer(window);
 
 
         engine->width = newWidth;
@@ -268,8 +225,6 @@ private:
         glViewport(0, 0, engine->width, engine->height);
         engine->setProjection(engine->projection, engine->width, engine->height);
     }
-
-
 
 
     // Get the position of the mouse on the complex plane
@@ -283,7 +238,6 @@ private:
 
 int main()
 {
-    
     PrettyEngine engine(1600, 900);
     engine.runEngine();
     return 0;
