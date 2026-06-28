@@ -22,29 +22,10 @@ class PrettyEngine
 {
 public:
     PrettyEngine(int inputWidth, int inputHeight)
-		: contextManager(inputWidth, inputHeight), shader(Shader("res/vertex.glsl", "res/mandelfrag.glsl")), renderer(Renderer())
+		: contextManager(inputWidth, inputHeight), renderer(Renderer(window, width, height))
     {
-        // Initialise ImGui
-        ImGui::CreateContext();
-        ImGui_ImplGlfw_InitForOpenGL(window, true);
-        ImGui_ImplOpenGL3_Init("#version 460 core");
-
-        // Imgui styling
-        ImGuiStyle& style = ImGui::GetStyle();
-        style.WindowRounding = 3.0f;
-        style.FrameRounding = 3.0f;
-        style.GrabRounding = 3.0f;
-
-
-        // Sets the projection matrix based on the window dimensions
-        setProjection(projection, width, height);
-
-        // Bind the Shader Object
-        shader.bind();
-
-        // Set a reference to this object in the window
+        // Set a reference to this object in the window object
         glfwSetWindowUserPointer(window, this);
-
 
         // Setting the cursor callback function
         glfwSetCursorPosCallback(window, mouseMovement);
@@ -54,14 +35,6 @@ public:
         glfwSetWindowSizeCallback(window, resizeWindow);
     }
 
-    ~PrettyEngine()
-    {
-        // Cleanup imgui
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui_ImplGlfw_Shutdown();
-        ImGui::DestroyContext();
-    }
-
     void runEngine()
     {
         while (!glfwWindowShouldClose(window))
@@ -69,62 +42,34 @@ public:
             // Poll for and process events
             glfwPollEvents();
 
+            // Get the position of the mouse on the complex plane
             getPositionOnComplexPlane();
 
-            shader.setUniform1i("u_maxIterations", maxIterations);
-            shader.setUniform1f("u_brightness", brightness);
-            shader.setUniform1f("u_zoom", zoom);
-            shader.setUniformMat2f("u_MVP", projection);
-            shader.setUniformVec2f("u_center", center);
+            // Prepare renderer for the next frame render
+            renderer.newFrame();
 
-            renderer.draw();
+            // Draw the mandelbrot set
+            renderer.drawMandelbrotSet(maxIterations, brightness, zoom, center);
 
-            ImGui_ImplOpenGL3_NewFrame();
-            ImGui_ImplGlfw_NewFrame();
-            ImGui::NewFrame();
-
-            ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
-            ImGui::SliderInt(" Max Iterations", &maxIterations, 50, 1000);
-            ImGui::SliderFloat("Brightness", &brightness, 50.0f, 1000.0f);
-            ImGui::Text("Zoom: %.4f", zoom);
-            posFormat = " %." + std::to_string(int(std::log10(1.0f / zoom)) + 3) + "f"; // Update the format based on zoom
-            ImGui::Text(("Position:" + posFormat + posFormat).c_str(), complexPlanePos.x, complexPlanePos.y);
-            if (ImGui::Button("Reset View"))
-            {
-                center.x = -0.5f;
-                center.y =  0.0f;
-                zoom = 2.0f;
-                maxIterations = 50;
-                brightness = 50.0f;
-            }
-            ImGui::End();
-
-            ImGui::SetNextWindowPos(ImVec2(width - 90, 5), ImGuiCond_Always);
-            ImGui::Begin("FPS", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
-            ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
-            ImGui::End();
-
-
-            ImGui::Render();
-            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-            glfwSwapBuffers(window);
+            // Draw the ImGui settings
+            renderer.drawSettings(maxIterations, brightness, zoom, complexPlanePos, center);
+            
+            // Draw the FPS counter
+            renderer.drawFPS(width);
+            
+            // Render all new drawn elements
+            renderer.render();
         }
     }
 
 private:
     ContextManager contextManager; // Object to initialise GLFW and GLEW before anything else
 
-    GLFWwindow*& window = contextManager.window; // Reference to the GLFW window pointer (owned by contextManager)
+    GLFWwindow* window = contextManager.window; // GLFW window pointer
 
     int& width = contextManager.width, height = contextManager.height; // Reference to the window dimensions (owned by contextManager)
 
-
-    Shader shader; // Shader object
     Renderer renderer; // Renderer object
-
-    mat2 projection; // Projection matrix for the shader (Based on the window dimensions)
-
 
 	vec2 center = vec2(-0.5f, 0.0f); // The position of the center of the screen on the complex plane
 	vec2 mousePos; // Position of the mouse on the screen
@@ -139,19 +84,6 @@ private:
 
     
     //// Display maintenance
-
-    // Sets the projection matrix based on the width and the height of the window
-    void setProjection(mat2& projection, int width, int height)
-    {
-        if (width > height)
-        {
-            projection.setValue(1, 1, (float)height / width);
-        }
-        else
-        {
-            projection.setValue(0, 0, (float)width / height);
-        }
-    }
 
     // Ensure the center is within the set boundaries
     void checkCenterBoundaries()
@@ -198,20 +130,25 @@ private:
     {
 		PrettyEngine* engine = (PrettyEngine*)glfwGetWindowUserPointer(window);
 
-        engine->zoom *= std::pow(1.1, -yoffset);
+        ImGuiIO& io = ImGui::GetIO();
+        io.AddMouseWheelEvent((float)xoffset, (float)yoffset);
+        if (!io.WantCaptureMouse)
+        {
+            engine->zoom *= std::pow(1.1, -yoffset);
 
-        // Increase the maximum number of iterations used in shader calculation
-        engine->maxIterations = int(50 * std::log2(1.0f / engine->zoom));
-        if (engine->maxIterations < 50)
-            engine->maxIterations = 50; // Ensure a minimum number of iterations
+            // Increase the maximum number of iterations used in shader calculation
+            engine->maxIterations = int(50 * std::log2(1.0f / engine->zoom));
+            if (engine->maxIterations < 50)
+                engine->maxIterations = 50; // Ensure a minimum number of iterations
 
-        // Increase the brightness value used in the shader calculation
-        engine->brightness = int(50 * std::log2(1.0f / engine->zoom));
-        if (engine->brightness < 50.0f)
-            engine->brightness = 50.0f; // Ensure a minimum brightness value
+            // Increase the brightness value used in the shader calculation
+            engine->brightness = int(50 * std::log2(1.0f / engine->zoom));
+            if (engine->brightness < 50.0f)
+                engine->brightness = 50.0f; // Ensure a minimum brightness value
 
-        engine->checkCenterBoundaries();
-        engine->checkMaxZoom();
+            engine->checkCenterBoundaries();
+            engine->checkMaxZoom();
+        }
     }
 
     // Resize window callback function
@@ -219,11 +156,10 @@ private:
     {
 		PrettyEngine* engine = (PrettyEngine*)glfwGetWindowUserPointer(window);
 
-
         engine->width = newWidth;
         engine->height = newHeight;
         glViewport(0, 0, engine->width, engine->height);
-        engine->setProjection(engine->projection, engine->width, engine->height);
+        engine->renderer.setProjection(engine->width, engine->height);
     }
 
 
