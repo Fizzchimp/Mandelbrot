@@ -20,7 +20,7 @@ set(MATHS_DIR /${CMAKE_SOURCE_DIR}/../dependencies/maths)
 # Maths source files
 set(MATHS_SOURCES
     ${MATHS_DIR}/src/vec2.cpp
-    ${MATHS_DIR}/src/mat2.cpp
+    ${MATHS_DIR}/src/mat3.cpp
 )
 
 
@@ -46,6 +46,7 @@ add_executable(${PROJECT_NAME}
     src/Errors.cpp
     src/Renderer.cpp
     src/Shader.cpp
+    src/SetAttributes.cpp
     ${IMGUI_SOURCES}
     ${MATHS_SOURCES}
 )
