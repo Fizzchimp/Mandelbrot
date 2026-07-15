@@ -84,24 +84,14 @@ void Shader::setUniform1f(const char* name, float value) const
 	GLCALL(glUniform1f(getUniform(name), value));
 }
 
-//void Shader::setUniform4f(const char* name, float f0, float f1, float f2, float f3) const
-//{
-//	GLCALL(glUniform4f(getUniform(name), f0, f1, f2, f3));
-//}
-
-//void Shader::setUniformMat4f(const char* name, const float* matrix) const
-//{
-//	GLCALL(glUniformMatrix4fv(getUniform(name), 1, GL_TRUE, matrix));
-//}
-
 void Shader::setUniformVec2f(const char* name, const float* vector) const
 {
 	GLCALL(glUniform2fv(getUniform(name), 1, vector));
 }
 
-void Shader::setUniformMat2f(const char* name, const float* matrix) const
+void Shader::setUniformMat3f(const char* name, const float* matrix) const
 {
-	GLCALL(glUniformMatrix2fv(getUniform(name), 1, GL_TRUE, matrix));
+	GLCALL(glUniformMatrix3fv(getUniform(name), 1, GL_TRUE, matrix));
 }
 
 void Shader::bind() const

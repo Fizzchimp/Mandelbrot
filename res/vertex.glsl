@@ -2,14 +2,13 @@
 
 layout(location = 0) in vec4 vertPos;
 
-layout(location = 0) out vec2 fragPos;
+layout(location = 0) out vec3 fragPos;
 
-uniform mat2 u_MVP;
-uniform vec2 u_center;
-
+uniform mat3 u_MVP; // TODO: This is actually the inverse projection matrix
+uniform mat3 u_transform;
 
 void main()
 {
-	fragPos = u_MVP * vertPos.xy;
-	gl_Position = vertPos;
+	fragPos = u_MVP * vertPos.xyz;
+	gl_Position = mat4(u_transform) * vertPos;
 }
