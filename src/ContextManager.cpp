@@ -27,11 +27,11 @@ ContextManager::ContextManager(int inputWidth, int inputHeight)
         std::cout << "Failed to create glfw window\n";
     }
 
-    // Set the width and height to the windows width and height
-    glfwGetWindowSize(window, &width, &height);
-
     // Maximise the window after creation (Setting GLFW_MAXIMISED as a hint isnt supported)
     glfwMaximizeWindow(window);
+
+    // Set the width and height to the windows width and height
+    glfwGetWindowSize(window, &width, &height);
 
     // Make the window's context current
     glfwMakeContextCurrent(window);
