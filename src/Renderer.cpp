@@ -55,15 +55,26 @@ Renderer::~Renderer()
 // Sets the projection matrix based on the width and the height of the window
 void Renderer::setProjection(int width, int height)
 {
+	// if (width > height)
+	// {
+	// 	projection.setValue(0, 0, 1.0f);
+	// 	projection.setValue(1, 1, (float)height / width);
+	// }
+	// else
+	// {
+	// 	projection.setValue(0, 0, (float)width / height);
+	// 	projection.setValue(1, 1, 1.0f);
+	// }
+
 	if (width > height)
-	{
-		projection.setValue(0, 0, 1.0f);
-		projection.setValue(1, 1, (float)height / width);
-	}
-	else
 	{
 		projection.setValue(0, 0, (float)width / height);
 		projection.setValue(1, 1, 1.0f);
+	}
+	else
+	{
+		projection.setValue(0, 0, 1.0f);
+		projection.setValue(1, 1, (float)height / width);
 	}
 }
 
