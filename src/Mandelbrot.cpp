@@ -79,6 +79,7 @@ public:
             
             // Render all new drawn elements
             renderer.render();
+            std::cout << complexToUV(mandelbrotAttribs, vec2(0.0f, 0.0f)).x << "\n";
         }
     }
 
@@ -94,8 +95,8 @@ private:
 
 	vec2 mousePos; // Position of the mouse on the screen (window coordinates)
     
-    SetAttributes mandelbrotAttribs = SetAttributes(50, 50.0f, 2.0f, vec2(-0.5f, 0.0f), left); // Attributes for rendering the mandelbrot set
-    SetAttributes juliaAttribs = SetAttributes(50, 50.0f, 2.0f, vec2(0.0f, 0.0f), right); // Attributes for rendering the julia set
+    SetAttributes mandelbrotAttribs = SetAttributes(50, 50.0f, 2.0f, 3.0f, vec2(-0.5f, 0.0f), left); // Attributes for rendering the mandelbrot set
+    SetAttributes juliaAttribs = SetAttributes(50, 50.0f, 2.0f, 6.0f, vec2(0.0f, 0.0f), right); // Attributes for rendering the julia set
 
     bool renderJuliaSet = false; // Signals if the julia set should be rendered
 
@@ -105,53 +106,11 @@ private:
 
     //// Display maintenance
 
-    // Ensure the center is within the set boundaries // TODO: MAKE MEASUREMENTS FOR EDGE BORDERS BE DETERMINED BY MAX ZOOM // TODO: MAKE MORE GENERIC TO WORK FOR JULIA SET ASWELL
-    void checkCenterBoundaries(SetAttributes& set)
-    {
-        // Pre calculation because of the screen dimensions
-        float horizontalScale, verticalScale;
-        if (width >= height)
-        {
-            horizontalScale = 1.0f;
-            verticalScale = (float)height / width;
-        } 
-        else 
-        {
-            horizontalScale = (float)width / height;
-            verticalScale = 1.0f;
-        }
-
-        // Maximum boundaries for the edge of the screen
-        float maxLeftPos = -3.5f;
-        float maxRightPos = 2.5f;
-
-        float maxBottomPos = -(3.0f + 3.0f * renderJuliaSet);
-        float maxTopPos = (3.0f + 3.0f * renderJuliaSet);
-
-        // If rendering both sets, the measured window widths are decreased
-        float juliaSetHalf = std::pow(2, renderJuliaSet);
-
-        // Calculate if the edge of the screen is past the boundaries and move them back inside
-        if (set.center.x / horizontalScale - set.zoom / juliaSetHalf < maxLeftPos) {set.center.x = (maxLeftPos + set.zoom / juliaSetHalf) * horizontalScale;}
-        else if (set.center.x / horizontalScale + set.zoom / juliaSetHalf > maxRightPos) {set.center.x = (maxRightPos - set.zoom / juliaSetHalf) * horizontalScale;}
-
-        if (set.center.y / verticalScale - set.zoom < maxBottomPos) {set.center.y = (maxBottomPos + set.zoom) * verticalScale;}
-        else if (set.center.y / verticalScale + set.zoom > maxTopPos) {set.center.y = (maxTopPos - set.zoom) * verticalScale;}
-
-    }
-
-    // Ensure the zoom value is lower than the maximum zoom value // TODO: Maybe make this a setAttribute method? So it can be used by the renderer in drawing settings with ImGui
-    void checkMaxZoom(SetAttributes& set)
-    {
-        float maxZoom = 3.0f + 3.0f * renderJuliaSet;
-        if (set.zoom > maxZoom) { set.zoom = maxZoom; }
-    }
-
     // Converts window coordinates to complex coordinates (window -> complex)
     vec2 windowToComplex(SetAttributes& set, vec2 windowPos)
     {
         if (renderJuliaSet && ((set.side == -1 && windowPos.x > width / 2) || (set.side == 1 && windowPos.x < width / 2))) {return vec2(NAN, NAN);}  // If both sets are being rendered, the screen is split so the sets window coordinates are different
-        return vec2((windowPos.x - width / 2 - (width * renderJuliaSet / 4 * set.side)), (height / 2 - windowPos.y)) / largestWindowDim * 2 * set.zoom + set.center;
+        return vec2((windowPos.x - width / 2 - (width * renderJuliaSet / 4 * set.side)), (height / 2 - windowPos.y)) / largestWindowDim * 2.0f * set.zoom + set.center;
     }
 
     // Converts complex coordinates to window coordinates (complex -> window) // TODO: I dont think this works when height > width
@@ -175,7 +134,7 @@ private:
         return ((markerWindowPos - mousePos).magnitude() < markerRadius);
     }
 
-    // Updates set properties when zooming in or out (called on scrollwheel callback)
+    // Updates set properties when zooming in or out (called on scrollwheel callback) // TODO: SHOULD THIS BE A SetAttribute METHOD?
     void changeSetZoom(SetAttributes& set, double zoom)
     {
         set.zoom *= std::pow(1.1, zoom);
@@ -190,20 +149,18 @@ private:
         if (set.brightness < 50.0f)
             set.brightness = 50.0f; // Ensure a minimum brightness value
 
-        checkMaxZoom(mandelbrotAttribs);
-        checkCenterBoundaries(mandelbrotAttribs);
+        set.enforceMaxZoom();
+        set.enforceSetBoundaries(width, height, renderJuliaSet);
     }
 
-    // Updates the center set property (called on mouse movement callback)
-    void changeSetCenter(SetAttributes& set, vec2 offset) // TODO: having the -= for the center.x doesnt make sense. Make it make sense.
+    // Updates the center set property (called on mouse movement callback) // TODO: SHOULD THIS BE A SetAttribute METHOD?
+    void changeSetCenter(SetAttributes& set, vec2 windowPosOffset)
     {
-        set.center.x -= (offset.x - mousePos.x) * 2.0f * set.zoom / largestWindowDim;
-        set.center.y += (offset.y - mousePos.y) * 2.0f * set.zoom / largestWindowDim;
-
-        checkCenterBoundaries(mandelbrotAttribs);
-        checkMaxZoom(mandelbrotAttribs);
+        set.center = set.center + windowPosOffset * 2.0f * set.zoom / largestWindowDim;
+        
+        set.enforceMaxZoom();
+        set.enforceSetBoundaries(width, height, renderJuliaSet);
     }
-
 
 
     ////// IO Callbacks
@@ -224,11 +181,11 @@ private:
         {
             if (!engine->renderJuliaSet || ((engine->mousePos.x - engine->width / 2) / engine->mandelbrotAttribs.side > 0))
             {
-                engine->changeSetCenter(engine->mandelbrotAttribs, vec2(xpos, ypos));
+                engine->changeSetCenter(engine->mandelbrotAttribs, vec2(engine->mousePos.x - xpos, ypos - engine->mousePos.y));
             }
             else
             {
-                engine->changeSetCenter(engine->juliaAttribs, vec2(xpos, ypos));
+                engine->changeSetCenter(engine->juliaAttribs, vec2(engine->mousePos.x - xpos, ypos - engine->mousePos.y));
             }
         }
 
@@ -286,7 +243,7 @@ private:
         glViewport(0, 0, engine->width, engine->height);
         engine->renderer.setProjection(engine->width, engine->height);
         engine->largestWindowDim = std::max(engine->width, engine->height);
-        engine->checkCenterBoundaries(engine->mandelbrotAttribs);
+        engine->mandelbrotAttribs.enforceSetBoundaries(engine->width, engine->height, engine->renderJuliaSet);
     }
 
     // Maximise window callback function
