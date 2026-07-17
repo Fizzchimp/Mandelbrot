@@ -96,7 +96,7 @@ void Renderer::drawMandelbrotSet(SetAttributes attributes, bool renderJuliaSet)
 	// Bind the mandelbrot shader
 	mandelbrotShader.bind();
 
-	// Set shader uniforms // TODO: Do these need to be set at each render? Or can they be set once and updated when needed?
+	// Set shader uniforms
 	mandelbrotShader.setUniform1i("u_maxIterations", attributes.maxIterations);
 	mandelbrotShader.setUniform1f("u_brightness", attributes.brightness);
 	mandelbrotShader.setUniform1f("u_zoom", attributes.zoom);
@@ -186,8 +186,11 @@ void Renderer::drawMandelbrotSettings(SetAttributes& mandelbrotAttribs, bool& re
             }
 			if (ImGui::Checkbox("Show Julia Set: ", &renderJuliaSet))
 			{
-				float maxZoom = 3.0f + 3.0f * renderJuliaSet;
-        		if (mandelbrotAttribs.zoom > maxZoom) { mandelbrotAttribs.zoom = maxZoom; }
+				mandelbrotAttribs.maxZoom = (3.0f * (1.0f + renderJuliaSet));
+				mandelbrotAttribs.enforceMaxZoom();
+				int width, height;
+				glfwGetWindowSize(window, &width, &height);
+				mandelbrotAttribs.enforceSetBoundaries(width, height, renderJuliaSet);
 			}
             ImGui::End();
 }
