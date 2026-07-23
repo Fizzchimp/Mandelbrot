@@ -11,11 +11,11 @@ struct ContextManager
     // Pointer to the GLFW window object
     GLFWwindow* window;
 
-    // Window dimensions (window coordinates)
-    int width, height;
+    // // Window dimensions (window coordinates)
+    // int width, height;
     
     // Constructor with the window dimensions
-    ContextManager(int inputWidth, int inputHeight);
+    ContextManager(int& width, int& weight);
 
     ~ContextManager();
 };
