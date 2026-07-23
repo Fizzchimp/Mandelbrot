@@ -81,8 +81,11 @@ public:
 	// Draw a marker on the mandelbrot set determining how the julia set is drawn
 	void drawMandelbrotMarker(vec2 position, float radius);
 
-	// Draw the ImGui settings
+	// Draw the ImGui settings for the mandelbrot set
 	void drawMandelbrotSettings(SetAttributes& mandelbrotAttribs, bool& renderJuliaSet);
+
+	// Draw the ImGui settings for the marker
+	void drawMarkerSettings(vec2& markerPos);
 
 	// Draw the FPS counter
 	void drawFPS(int width);

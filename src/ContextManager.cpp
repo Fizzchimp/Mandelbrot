@@ -1,8 +1,7 @@
 #include "ContextManager.h"
 
 // Constructor with the window dimensions
-ContextManager::ContextManager(int inputWidth, int inputHeight)
-    : width(inputWidth), height(inputHeight)
+ContextManager::ContextManager(int& width, int& height)
 {
     // Initialize the library
     if (!glfwInit())
@@ -19,7 +18,7 @@ ContextManager::ContextManager(int inputWidth, int inputHeight)
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Create a windowed mode window and its OpenGL context
-    window = glfwCreateWindow(inputWidth, inputHeight, "Mandelbrot", nullptr, nullptr);
+    window = glfwCreateWindow(width, height, "Mandelbrot Set Explorer", nullptr, nullptr);
 
     // Check if window was created succesfully
     if (!window)
