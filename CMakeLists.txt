@@ -8,6 +8,8 @@ project(Mandelbrot
     LANGUAGES CXX
 )
 
+set(EXECUTABLE_NAME mandelbrot)
+
 # Find required packages
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
@@ -40,7 +42,7 @@ set(IMGUI_SOURCES
 )
 
 # Create the exectuable target and link all source files
-add_executable(${PROJECT_NAME}
+add_executable(${EXECUTABLE_NAME}
     src/Mandelbrot.cpp
     src/ContextManager.cpp
     src/Errors.cpp
@@ -59,7 +61,7 @@ add_custom_target(copy_resources ALL
     COMMENT "Copying resources into binary directory ${PROJECT_BINARY_DIR}/res"
 )
 # Add the dependancy for copied resources
-add_dependencies(${PROJECT_NAME} copy_resources)
+add_dependencies(${EXECUTABLE_NAME} copy_resources)
 
 
 # Specify include directories
@@ -71,7 +73,7 @@ include_directories(
 )
 
 # Specify to link required libraries
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(${EXECUTABLE_NAME}
     OpenGL::GL
     GLEW::GLEW
     glfw
