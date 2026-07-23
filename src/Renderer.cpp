@@ -166,7 +166,7 @@ void Renderer::drawMandelbrotMarker(vec2 position, float radius)
 	markerShader.bind();
 
 	// Set shader uniforms
-	markerShader.setUniformMat3f("u_projection", projection);
+	markerShader.setUniformMat3f("u_projection", projection.inverse());
 	markerShader.setUniformMat3f("u_transform", translation * scale);
 	markerShader.setUniformMat3f("u_translation", translation);
 
@@ -176,34 +176,42 @@ void Renderer::drawMandelbrotMarker(vec2 position, float radius)
 	GLCALL(glDrawArrays(GL_TRIANGLES, 0, 6));
 }
 
-// Draw the ImGui settings
+// Draw the ImGui settings for the mandelbrot set
 void Renderer::drawMandelbrotSettings(SetAttributes& mandelbrotAttribs, bool& renderJuliaSet)
 {
-	// ImGui::ShowDemoWindow();
-            
-            ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
-            ImGui::SliderInt(" Max Iterations", &mandelbrotAttribs.maxIterations, 50, 1000);
-            ImGui::SliderFloat("Brightness", &mandelbrotAttribs.brightness, 50.0f, 1000.0f);
-            ImGui::Text("Zoom: %.4f", mandelbrotAttribs.zoom);
-            std::string posFormat = " %." + std::to_string(int(std::log10(1.0f / mandelbrotAttribs.zoom)) + 3) + "f"; // Update the format based on zoom
-            ImGui::Text(("Mouse Position:" + posFormat + posFormat).c_str(), mandelbrotAttribs.complexPlanePos.x, mandelbrotAttribs.complexPlanePos.y);
-            if (ImGui::Button("Reset View"))
-            {
-                mandelbrotAttribs.center.x = -0.5f;
-                mandelbrotAttribs.center.y =  0.0f;
-                mandelbrotAttribs.zoom = 2.0f;
-                mandelbrotAttribs.maxIterations = 50;
-                mandelbrotAttribs.brightness = 50.0f;
-            }
-			if (ImGui::Checkbox("Show Julia Set: ", &renderJuliaSet))
-			{
-				mandelbrotAttribs.maxZoom = (3.0f * (1.0f + renderJuliaSet));
-				mandelbrotAttribs.enforceMaxZoom();
-				int width, height;
-				glfwGetWindowSize(window, &width, &height);
-				mandelbrotAttribs.enforceSetBoundaries(width, height, renderJuliaSet);
-			}
-            ImGui::End();
+	// ImGui::ShowDemoWindow();   
+	ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
+	ImGui::SliderInt(" Max Iterations", &mandelbrotAttribs.maxIterations, 50, 1000);
+	ImGui::SliderFloat(" Brightness", &mandelbrotAttribs.brightness, 50.0f, 1000.0f);
+	ImGui::Text("Zoom: %.4f", mandelbrotAttribs.zoom);
+	std::string posFormat = " %." + std::to_string(int(std::log10(1.0f / mandelbrotAttribs.zoom)) + 3) + "f"; // Update the format based on zoom
+	ImGui::Text(("Mouse Position:" + posFormat + posFormat).c_str(), mandelbrotAttribs.complexPlanePos.x, mandelbrotAttribs.complexPlanePos.y);
+	if (ImGui::Button("Reset View"))
+	{
+		mandelbrotAttribs.center.x = -0.5f;
+		mandelbrotAttribs.center.y =  0.0f;
+		mandelbrotAttribs.zoom = 2.0f;
+		mandelbrotAttribs.maxIterations = 50;
+		mandelbrotAttribs.brightness = 50.0f;
+	}
+	if (ImGui::Checkbox("Show Julia Set: ", &renderJuliaSet))
+	{
+		mandelbrotAttribs.maxZoom = (3.0f * (1.0f + renderJuliaSet));
+		mandelbrotAttribs.enforceMaxZoom();
+		int width, height;
+		glfwGetWindowSize(window, &width, &height);
+		mandelbrotAttribs.enforceSetBoundaries(width, height, renderJuliaSet);
+	}
+	ImGui::End();
+}
+
+// Draw the ImGui settings for the marker
+void Renderer::drawMarkerSettings(vec2 &markerPos)
+{
+	ImGui::Begin("Marker", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
+	ImGui::InputFloat2(" Marker position", &markerPos.x);
+
+	ImGui::End();
 }
 
 // Draw the FPS counter
