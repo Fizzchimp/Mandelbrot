@@ -116,10 +116,10 @@ void Renderer::drawMandelbrotSet(SetAttributes attributes, bool renderJuliaSet)
 	if (renderJuliaSet)
 	{
 		translation.setValue(0, 2, attributes.side);
-		mandelbrotShader.setUniformMat3f("u_MVP", projection * stretch);
+		mandelbrotShader.setUniformMat3f("u_projection", projection * stretch);
 		mandelbrotShader.setUniformMat3f("u_transform", stretch * translation);
 	} else {
-		mandelbrotShader.setUniformMat3f("u_MVP", projection);
+		mandelbrotShader.setUniformMat3f("u_projection", projection);
 		mandelbrotShader.setUniformMat3f("u_transform", mat3());
 	}
 
@@ -139,7 +139,7 @@ void Renderer::drawJuliaSet(SetAttributes attributes, vec2 startingPos)
 	juliaShader.setUniform1f("u_zoom", attributes.zoom);
 	juliaShader.setUniformVec2f("u_center", attributes.center);
 	juliaShader.setUniformVec2f("u_startingPos", startingPos);
-	juliaShader.setUniformMat3f("u_MVP", projection * stretch);
+	juliaShader.setUniformMat3f("u_projection", projection * stretch);
 
 	translation.setValue(0, 2, attributes.side);
 	juliaShader.setUniformMat3f("u_transform", stretch * translation);
