@@ -10,7 +10,7 @@ struct SetAttributes // Attributes used for rendering both sets
     float zoom; // Zoom level of the complex plane
     float maxZoom; // Maximum zoom level allowed
 
-    vec2 center; // The position of the center of the rendered object (complex coordinates)
+    vec2 center; // Complex position at the center of the rendered object (complex coordinates)
     vec2 complexPlanePos; // Position of the mouse (complex coordinates)
     
     Side side; // Specifies the side of the screen the set is rendered
@@ -19,6 +19,12 @@ struct SetAttributes // Attributes used for rendering both sets
     SetAttributes(float maxIterations, float brightness, float zoom, float maxZoom, vec2 center, Side side);
 
 
+    // Updates set properties when zooming in or out
+    void updateZoom(double zoomOffset, int width, int height, bool renderJuliaSet);
+    
+    // Updates the center of the set
+    void updateCenter(vec2 windowPosOffset, int width, int height, bool renderJuliaSet);
+    
     // Ensure the zoom value is lower than the maximum zoom value
     void enforceMaxZoom();
 
