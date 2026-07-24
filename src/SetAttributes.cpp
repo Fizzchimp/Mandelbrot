@@ -4,7 +4,7 @@ SetAttributes::SetAttributes(float maxIterations, float brightness, float zoom, 
     : maxIterations(maxIterations), brightness(brightness), zoom(zoom), maxZoom(maxZoom), center(center), complexPlanePos(vec2()), side(side) {}
 
 
-// Updates set properties when zooming in or out (called on scrollwheel callback) // TODO: SHOULD THIS BE A SetAttribute METHOD?
+// Updates set properties when zooming in or out (called on scrollwheel callback)
 void SetAttributes::updateZoom(double zoomOffset, int width, int height, bool renderJuliaSet)
 {
     zoom *= std::pow(1.1, zoomOffset);
@@ -23,7 +23,7 @@ void SetAttributes::updateZoom(double zoomOffset, int width, int height, bool re
     enforceSetBoundaries(width, height, renderJuliaSet);
 }
 
-// Updates the center set property (called on mouse movement callback) // TODO: SHOULD THIS BE A SetAttribute METHOD?
+// Updates the center set property (called on mouse movement callback)
 void SetAttributes::updateCenter(vec2 windowPosOffset, int width, int height, bool renderJuliaSet)
 {
     center = center + windowPosOffset * 2.0f * zoom / std::min(width, height);
