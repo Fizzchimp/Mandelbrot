@@ -58,6 +58,7 @@ private:
 
 	Shader markerShader; // Shader used to render the marker on the mandelbrot set
 
+	ImDrawList* draw_list;
 public:
 
 	Renderer(GLFWwindow* window, int width, int height);
@@ -78,14 +79,17 @@ public:
 	// Draw the julia set
 	void drawJuliaSet(SetAttributes attributes, vec2 startingPos);
 
+	// Draw a grid on the complex plane
+	void drawGrid(SetAttributes set, int width, int height, vec2d center, double diff, bool renderJuliaSet);
+
 	// Draw a marker on the mandelbrot set determining how the julia set is drawn
 	void drawMandelbrotMarker(vec2 position, float radius);
 
 	// Draw the ImGui settings for the mandelbrot set
-	void drawMandelbrotSettings(SetAttributes& mandelbrotAttribs, bool& renderJuliaSet);
+	void drawMandelbrotSettings(SetAttributes& mandelbrotAttribs, bool& renderJuliaSet, bool& renderGrid);
 
 	// Draw the ImGui settings for the marker
-	void drawMarkerSettings(vec2& markerPos);
+	void drawMarkerSettings(vec2d& markerPos);
 
 	// Draw the FPS counter
 	void drawFPS(int width);
