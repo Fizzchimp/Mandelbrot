@@ -1,7 +1,7 @@
 #include "SetAttributes.h"
 
-SetAttributes::SetAttributes(float maxIterations, float brightness, float zoom, float maxZoom, vec2 center, Side side)
-    : maxIterations(maxIterations), brightness(brightness), zoom(zoom), maxZoom(maxZoom), center(center), complexPlanePos(vec2()), side(side) {}
+SetAttributes::SetAttributes(float maxIterations, float brightness, float zoom, float maxZoom, vec2d center, Side side)
+    : maxIterations(maxIterations), brightness(brightness), zoom(zoom), maxZoom(maxZoom), center(center), complexPlanePos(vec2d()), side(side) {}
 
 
 // Updates set properties when zooming in or out (called on scrollwheel callback)
@@ -24,9 +24,9 @@ void SetAttributes::updateZoom(double zoomOffset, int width, int height, bool re
 }
 
 // Updates the center set property (called on mouse movement callback)
-void SetAttributes::updateCenter(vec2 windowPosOffset, int width, int height, bool renderJuliaSet)
+void SetAttributes::updateCenter(vec2d windowPosOffset, int width, int height, bool renderJuliaSet)
 {
-    center = center + windowPosOffset * 2.0f * zoom / std::min(width, height);
+    center = center + windowPosOffset * 2.0 * zoom / std::min(width, height);
     
     enforceMaxZoom();
     enforceSetBoundaries(width, height, renderJuliaSet);
@@ -50,7 +50,7 @@ void SetAttributes::enforceSetBoundaries(int width, int height, bool renderJulia
     float verticalScale = 1.0f;
 
     // Factor in screen dimension inequalities
-    if (width >= height)
+    if (width <= height)
     {
         verticalScale *= (float)height / width;
     } 

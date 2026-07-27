@@ -12,11 +12,14 @@ Renderer::Renderer(GLFWwindow* window, int width, int height)
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 460 core");
 
-	// Imgui styling
+	// ImGui styling
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.WindowRounding = 3.0f;
 	style.FrameRounding = 3.0f;
 	style.GrabRounding = 3.0f;
+
+	// // ImGui draw list init
+	// draw_list = ImGui::GetWindowDrawList();
 
 	// Generate vertex array
 	GLCALL(glGenVertexArrays(1, &vertexArrayID));
@@ -55,17 +58,6 @@ Renderer::~Renderer()
 // Sets the projection matrix based on the width and the height of the window
 void Renderer::setProjection(int width, int height)
 {
-	// if (width > height)
-	// {
-	// 	projection.setValue(0, 0, 1.0f);
-	// 	projection.setValue(1, 1, (float)height / width);
-	// }
-	// else
-	// {
-	// 	projection.setValue(0, 0, (float)width / height);
-	// 	projection.setValue(1, 1, 1.0f);
-	// }
-
 	if (width > height)
 	{
 		projection.setValue(0, 0, (float)width / height);
@@ -111,7 +103,7 @@ void Renderer::drawMandelbrotSet(SetAttributes attributes, bool renderJuliaSet)
 	mandelbrotShader.setUniform1i("u_maxIterations", attributes.maxIterations);
 	mandelbrotShader.setUniform1f("u_brightness", attributes.brightness);
 	mandelbrotShader.setUniform1f("u_zoom", attributes.zoom);
-	mandelbrotShader.setUniformVec2f("u_center", attributes.center);
+	mandelbrotShader.setUniformVec2f("u_center", vec2(attributes.center.x, attributes.center.y));
 
 	if (renderJuliaSet)
 	{
@@ -137,7 +129,7 @@ void Renderer::drawJuliaSet(SetAttributes attributes, vec2 startingPos)
 	juliaShader.setUniform1i("u_maxIterations", attributes.maxIterations);
 	juliaShader.setUniform1f("u_brightness", attributes.brightness);
 	juliaShader.setUniform1f("u_zoom", attributes.zoom);
-	juliaShader.setUniformVec2f("u_center", attributes.center);
+	juliaShader.setUniformVec2f("u_center", vec2(attributes.center.x, attributes.center.y));
 	juliaShader.setUniformVec2f("u_startingPos", startingPos);
 	juliaShader.setUniformMat3f("u_projection", projection * stretch);
 
@@ -147,6 +139,36 @@ void Renderer::drawJuliaSet(SetAttributes attributes, vec2 startingPos)
 	// Draw the screen
 	GLCALL(glDrawArrays(GL_TRIANGLES, 0, 6));
 }
+
+
+// Draw a grid on the complex plane
+void Renderer::drawGrid(SetAttributes set, int width, int height, vec2d center, double diff, bool renderJuliaSet)
+{	
+	// ImGui draw list init
+	draw_list = ImGui::GetBackgroundDrawList();
+	ImU32 colour = IM_COL32(100, 130, 200, 150);
+	float axisWidth = 3.5f;
+	float gridWidth = 1.0f;
+
+	width /= (1 + renderJuliaSet);
+
+	float sideExtra = (width * 0.5 * (set.side + 1)) * renderJuliaSet; // 0 if left, width if right
+	diff -= center.x;
+	
+	// Draw origin crossing axis lines
+	if ((0 + sideExtra) < center.x && center.x < (width + sideExtra)) {draw_list->AddLine(ImVec2(center.x, 0.0f), ImVec2(center.x, height), colour, axisWidth);} // Vertical line
+	if (0 < center.y && center.y < width) {draw_list->AddLine(ImVec2(0.0f + sideExtra, center.y), ImVec2(width + sideExtra, center.y), colour, axisWidth);} // Horizontal line
+
+	// TODO: The conditions for both lines are janky af. I wrote this very tired
+	// Draw verticle grid lines
+	float xPos = std::fmod(center.x - sideExtra, diff);
+	for (int i = (xPos < 0.0); i < (width - xPos) / diff; i++)	{draw_list->AddLine(ImVec2(xPos + diff * i + sideExtra, 0.0f), ImVec2(xPos + diff * i + sideExtra, height), colour, gridWidth);}
+
+	// Draw horizontal grid lines 
+	float yPos = std::fmod(center.y, diff);
+	for (int i = (yPos < 0.0); i < (height - yPos) / diff; i++) {draw_list->AddLine(ImVec2(0.0f + sideExtra, yPos + diff * i), ImVec2(width + sideExtra, yPos + diff * i), colour, gridWidth);}
+}
+
 
 // Draw a marker on the mandelbrot set determining how the julia set is drawn
 void Renderer::drawMandelbrotMarker(vec2 position, float radius)
@@ -177,23 +199,24 @@ void Renderer::drawMandelbrotMarker(vec2 position, float radius)
 }
 
 // Draw the ImGui settings for the mandelbrot set
-void Renderer::drawMandelbrotSettings(SetAttributes& mandelbrotAttribs, bool& renderJuliaSet)
+void Renderer::drawMandelbrotSettings(SetAttributes& mandelbrotAttribs, bool& renderJuliaSet, bool& renderGrid)
 {
 	// ImGui::ShowDemoWindow();   
 	ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
 	ImGui::SliderInt(" Max Iterations", &mandelbrotAttribs.maxIterations, 50, 1000);
 	ImGui::SliderFloat(" Brightness", &mandelbrotAttribs.brightness, 50.0f, 1000.0f);
-	ImGui::Text("Zoom: %.4f", mandelbrotAttribs.zoom);
+	ImGui::Text("Zoom: %.10f", mandelbrotAttribs.zoom);
 	std::string posFormat = " %." + std::to_string(int(std::log10(1.0f / mandelbrotAttribs.zoom)) + 3) + "f"; // Update the format based on zoom
 	ImGui::Text(("Mouse Position:" + posFormat + posFormat).c_str(), mandelbrotAttribs.complexPlanePos.x, mandelbrotAttribs.complexPlanePos.y);
 	if (ImGui::Button("Reset View"))
 	{
-		mandelbrotAttribs.center.x = -0.5f;
-		mandelbrotAttribs.center.y =  0.0f;
-		mandelbrotAttribs.zoom = 2.0f;
+		mandelbrotAttribs.center.x = -0.5;
+		mandelbrotAttribs.center.y =  0.0;
+		mandelbrotAttribs.zoom = 2.0;
 		mandelbrotAttribs.maxIterations = 50;
 		mandelbrotAttribs.brightness = 50.0f;
 	}
+	ImGui::Checkbox("Show grid: ", &renderGrid);
 	if (ImGui::Checkbox("Show Julia Set: ", &renderJuliaSet))
 	{
 		mandelbrotAttribs.maxZoom = (3.0f * (1.0f + renderJuliaSet));
@@ -206,10 +229,10 @@ void Renderer::drawMandelbrotSettings(SetAttributes& mandelbrotAttribs, bool& re
 }
 
 // Draw the ImGui settings for the marker
-void Renderer::drawMarkerSettings(vec2 &markerPos)
+void Renderer::drawMarkerSettings(vec2d& markerPos)
 {
 	ImGui::Begin("Marker", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
-	ImGui::InputFloat2(" Marker position", &markerPos.x);
+	ImGui::InputDouble(" Marker position", &markerPos.x);
 
 	ImGui::End();
 }
