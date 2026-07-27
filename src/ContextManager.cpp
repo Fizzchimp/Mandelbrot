@@ -24,6 +24,7 @@ ContextManager::ContextManager(int& width, int& height)
     if (!window)
     {
         std::cout << "Failed to create glfw window\n";
+        assert(false);
     }
 
     // Maximise the window after creation (Setting GLFW_MAXIMISED as a hint isnt supported)
