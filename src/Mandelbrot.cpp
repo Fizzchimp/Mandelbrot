@@ -60,12 +60,16 @@ public:
 
             // Render the mandelbrot set
             renderer.drawMandelbrotSet(mandelbrotAttribs, renderJuliaSet);
+            
+            // Render the ImGui settings for the mandelbrot set
+            renderer.drawMandelbrotSettings(mandelbrotAttribs, renderJuliaSet, renderGrid, width);
+                        
 
-            // Draw the grid for mandelbrot set
+            // Render the grid for mandelbrot set
             if (renderGrid)
             {
-                double diff = getGridDiff(mandelbrotAttribs);
-                renderer.drawGrid(mandelbrotAttribs, width, height, complexToWindowd(mandelbrotAttribs, vec2d(0.0f, 0.0f)), complexToWindowd(mandelbrotAttribs, vec2d(diff, diff)).x, renderJuliaSet);
+                // double diff = getGridDiff(mandelbrotAttribs);
+                renderer.drawGrid(mandelbrotAttribs, width, height, renderJuliaSet);
             }
 
             // Julia set and marker
@@ -81,17 +85,16 @@ public:
                 // Render the Julia Set
                 renderer.drawJuliaSet(juliaAttribs, vec2(markerPos.x, markerPos.y));
 
+                // Render the ImGui settings for the julia set
+                renderer.drawJuliaSettings(juliaAttribs, width);
+
                 // Draw the grid for julia set
                 if (renderGrid)
                 {
-                    double diff = getGridDiff(juliaAttribs);
-                    renderer.drawGrid(juliaAttribs, width, height, complexToWindowd(juliaAttribs, vec2d(0.0f, 0.0f)), complexToWindowd(juliaAttribs, vec2d(diff, diff)).x, renderJuliaSet);
+                    // double diff = getGridDiff(juliaAttribs);
+                    renderer.drawGrid(juliaAttribs, width, height, renderJuliaSet);
                 }
             }
-
-            // Render the ImGui settings for the mandelbrot set
-            renderer.drawMandelbrotSettings(mandelbrotAttribs, renderJuliaSet, renderGrid);
-            
             // Render the FPS counter
             renderer.drawFPS(width);
             
@@ -127,28 +130,17 @@ private:
     // Converts window coordinates to complex coordinates (window -> complex)
     vec2d windowToComplex(SetAttributes& set, vec2 windowPos)
     {
-        int thing = std::min(width, height);
-
         if (renderJuliaSet && ((set.side == -1 && windowPos.x > width / 2) || (set.side == 1 && windowPos.x < width / 2))) {return vec2d(NAN, NAN);}  // If both sets are being rendered, the screen is split so the sets window coordinates are different
-        return vec2d((windowPos.x - width / 2.0f - (width * renderJuliaSet / 4.0f * set.side)), (height / 2.0f - windowPos.y)) / std::min(width, height) * 2.0f * set.zoom + set.center;
+        return vec2d((windowPos.x - width / 2.0f - width * renderJuliaSet / 4.0f * set.side), height / 2.0f - windowPos.y) / std::min(width, height) * 2.0f * set.zoom + set.center;
     }
 
-    // Converts complex coordinates to window coordinates (complex -> window)
+    // Converts complex coordinates to window coordinates (complex -> window) // TODO: CLEAN UP
     vec2 complexToWindow(SetAttributes& set, vec2d complexPos)
     {
         vec2d temp = (complexPos - set.center) / set.zoom * std::min(width, height);
         vec2d temp2 = vec2d(temp.x + (width * renderJuliaSet / 2 * set.side) + width, -temp.y + height) / 2.0f;
         // return vec2(temp.x + (width * renderJuliaSet / 2 * set.side) + width, -temp.y + height) / 2.0f;
         return vec2(temp2.x, temp2.y);
-    }
-
-    // Converts complex coordinates to window coordinates MORE DOUBLE? (complex -> window) // TODO: IS THIS NECESSARY?
-    vec2d complexToWindowd(SetAttributes& set, vec2d complexPos)
-    {
-        vec2d temp = (complexPos - set.center) / set.zoom * std::min(width, height);
-        vec2d temp2 = vec2d(temp.x + (width * renderJuliaSet / 2 * set.side) + width, -temp.y + height) / 2.0f;
-        // return vec2(temp.x + (width * renderJuliaSet / 2 * set.side) + width, -temp.y + height) / 2.0f;
-        return temp2;
     }
 
     // Converts complex plane coordinates to UV coordinates (complex -> UV)
@@ -165,22 +157,6 @@ private:
         vec2 markerWindowPos = complexToWindow(mandelbrotAttribs, markerPos);
         return ((markerWindowPos - vec2(mousePos.x, mousePos.y)).magnitude() < markerRadius);
     }
-
-    // Calculates the distance two lines on the graph will be (window distance)
-    double getGridDiff(SetAttributes set)
-    {
-        int exp = std::floor(std::log10(set.zoom));
-        double mant = set.zoom / std::pow(10, (int)exp);
-
-        double diff;
-
-        if (1 < mant && mant <= 2) {diff = std::pow(10, exp);}
-        else if (2 < mant && mant <= 5) {diff = 2 * std::pow(10, exp);}
-        else {diff = 5 * std::pow(10, exp);}
-
-        return diff;
-    }
-
 
 
     ////// IO Callbacks
@@ -277,7 +253,7 @@ private:
 
 int main()
 {
-    PrettyEngine engine(1800, 900);
+    PrettyEngine engine(1600, 1200);
     engine.runEngine();
     return 0;
 }
