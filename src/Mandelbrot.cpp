@@ -46,7 +46,6 @@ public:
 
     void runEngine()
     {
-        // TODO: Make an fps cap option.
         while (!glfwWindowShouldClose(window))
         {
             // Poll for and process events
@@ -75,12 +74,11 @@ public:
             // Julia set and marker
             if (renderJuliaSet)
             {
-                // Render the mandelbrot set marker
-                renderer.drawMandelbrotMarker(complexToUV(mandelbrotAttribs, markerPos), markerRadius / std::min(width, height) * 2);
-
-
                 // Render ImGui settings for the marker
-                renderer.drawMarkerSettings(markerPos);
+                vec2 markerWindowCenter = renderer.drawMarkerSettings(markerPos, mandelbrotAttribs, width);
+
+                // Render the mandelbrot set marker
+                renderer.drawMandelbrotMarker(complexToWindow(mandelbrotAttribs, markerPos), 11, markerWindowCenter, width, height, mandelbrotAttribs);
 
                 // Render the Julia Set
                 renderer.drawJuliaSet(juliaAttribs, vec2(markerPos.x, markerPos.y));
@@ -142,14 +140,6 @@ private:
         // return vec2(temp.x + (width * renderJuliaSet / 2 * set.side) + width, -temp.y + height) / 2.0f;
         return vec2(temp2.x, temp2.y);
     }
-
-    // Converts complex plane coordinates to UV coordinates (complex -> UV)
-    vec2 complexToUV(SetAttributes& set, vec2d complexPos)
-    {
-        vec2d temp = (complexPos - set.center) / set.zoom + vec2d(0.5f * (width > height ? (double)width / height : 1.0f) * set.side * renderJuliaSet, 0.0);
-        return vec2(temp.x, temp.y);
-    }
-
 
     // Detects if the mouse is hovering over the marker (mousePos in window coordinates)
     bool isHoveringOnMarker() 

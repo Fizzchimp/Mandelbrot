@@ -4,8 +4,28 @@ Renderer::Renderer(GLFWwindow* window, int width, int height)
 : window(window), mandelbrotShader(Shader("res/vertex.glsl", "res/mandelfrag.glsl")), juliaShader(Shader("res/vertex.glsl", "res/juliafrag.glsl")), markerShader(Shader("res/markervert.glsl", "res/markerfrag.glsl"))
 {
 	// Bind the Shader Object
-	// markerShader.bind();
 	mandelbrotShader.bind();
+	
+	
+	// Generate vertex array
+	GLCALL(glGenVertexArrays(1, &vertexArrayID));
+	GLCALL(glBindVertexArray(vertexArrayID));
+
+	// Generate vertex buffer
+	GLCALL(glGenBuffers(1, &vertexBufferID));
+	GLCALL(glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID));
+	GLCALL(glBufferData(GL_ARRAY_BUFFER, 18 * sizeof(float), vertices, GL_STATIC_DRAW));
+	
+	// Set vertex array attributes
+	GLCALL(glEnableVertexAttribArray(0))
+	GLCALL(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr));
+	
+	// Sets the projection matrix based on the window dimensions
+	setProjection(width, height);
+	
+	// Enable blending
+	GLCALL(glEnable(GL_BLEND));
+	GLCALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
 	// Initialise ImGui
 	ImGui::CreateContext();
@@ -17,29 +37,6 @@ Renderer::Renderer(GLFWwindow* window, int width, int height)
 	style.WindowRounding = 3.0f;
 	style.FrameRounding = 3.0f;
 	style.GrabRounding = 3.0f;
-
-	// // ImGui draw list init
-	// draw_list = ImGui::GetWindowDrawList();
-
-	// Generate vertex array
-	GLCALL(glGenVertexArrays(1, &vertexArrayID));
-	GLCALL(glBindVertexArray(vertexArrayID));
-
-	// Generate vertex buffer
-	GLCALL(glGenBuffers(1, &vertexBufferID));
-	GLCALL(glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID));
-	GLCALL(glBufferData(GL_ARRAY_BUFFER, 18 * sizeof(float), vertices, GL_STATIC_DRAW));
-
-	// Set vertex array attributes
-	GLCALL(glEnableVertexAttribArray(0))
-	GLCALL(glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), nullptr));
-
-	// Sets the projection matrix based on the window dimensions
-	setProjection(width, height);
-
-	// Enable blending
-	GLCALL(glEnable(GL_BLEND));
-	GLCALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 }
 
 Renderer::~Renderer()
@@ -234,39 +231,38 @@ void Renderer::drawGrid(SetAttributes set, int width, int height, bool renderJul
 	
 	
 // Draw a marker on the mandelbrot set determining how the julia set is drawn
-void Renderer::drawMandelbrotMarker(vec2 position, float radius)
+void Renderer::drawMandelbrotMarker(vec2 markerPos, float radius, vec2 windowPos, int width, int height, SetAttributes& mandelbrotAttribs)
 {
-	mat3 translation = mat3(
-		1.0f, 0.0f, position.x,
-		0.0f, 1.0f, position.y,
-		0.0f, 0.0f, 1.0f
-	);
+	// Fetch the draw list
+	drawList = ImGui::GetBackgroundDrawList();
 
-	mat3 scale = {
-		radius, 0.0f,   0.0f,
-		0.0f,   radius, 0.0f,
-		0.0f,   0.0f,   1.0f
-	};
-	// Bind the shader
-	markerShader.bind();
+	ImU32 markerCol = IM_COL32(125, 125, 150, 255); // Marker colouring
+	
+	float sideExtra = (width * 0.25f * (mandelbrotAttribs.side + 1)); // 0 if left, width / 2 if right
 
-	// Set shader uniforms
-	markerShader.setUniformMat3f("u_projection", projection.inverse());
-	markerShader.setUniformMat3f("u_transform", translation * scale);
-	markerShader.setUniformMat3f("u_translation", translation);
+	if (0 + sideExtra < markerPos.x && markerPos.x < width / 2 + sideExtra && 0 < markerPos.y && markerPos.y < height)
+	{
+		// Draw the marker
+		drawList->AddCircle(ImVec2(markerPos.x + 0.5, markerPos.y + 0.5), radius, markerCol, 0, 2.0f);
+		drawList->AddLine(ImVec2(markerPos.x - radius, markerPos.y), ImVec2(markerPos.x + radius, markerPos.y), markerCol, 2.0f);
+		drawList->AddLine(ImVec2(markerPos.x, markerPos.y - radius), ImVec2(markerPos.x, markerPos.y + radius), markerCol, 2.0f);
 
-	markerShader.setUniformVec2f("u_markerCenter", position);
+		markerPos = markerPos + (markerPos * -1 + windowPos).unitVector() * (radius + 1);
+	}
+	if (markerPos.x > width / 2 + sideExtra) {markerPos = vec2(width / 2 + sideExtra, (markerPos.y - windowPos.y) / (markerPos.x - windowPos.x) * (sideExtra + width / 2 - windowPos.x) + windowPos.y);} // Too far right
+	else if (markerPos.x < 0 + sideExtra) {markerPos = vec2(0 + sideExtra, (markerPos.y - windowPos.y) / (markerPos.x - windowPos.x) * (sideExtra - windowPos.x) + windowPos.y);} // Too far left
+	if (markerPos.y > height) {markerPos = vec2((height - windowPos.y) * (markerPos.x - windowPos.x) / (markerPos.y - windowPos.y) + windowPos.x, height);} // Too far down
+	else if (markerPos.y < 0) {markerPos = vec2(-windowPos.y * (markerPos.x - windowPos.x) / (markerPos.y - windowPos.y) + windowPos.x, 0);} // Too far up
 
-	// Draw the marker
-	GLCALL(glDrawArrays(GL_TRIANGLES, 0, 6));
+	// Draw a line from the marker to the window
+	drawList->AddLine(ImVec2(markerPos.x, markerPos.y), ImVec2(windowPos.x, windowPos.y), IM_COL32(120, 140, 200, 150), 3.0f);
 }
 
 // Draw the ImGui settings for the mandelbrot set
 void Renderer::drawMandelbrotSettings(SetAttributes& mandelbrotAttribs, bool& renderJuliaSet, bool& renderGrid, int width)
 {
-	// ImGui::ShowDemoWindow();   
-	ImGui::SetNextWindowPos(ImVec2(width * (1 + mandelbrotAttribs.side) / 4 * renderJuliaSet + 60, 60));
-	ImGui::Begin("Mandelbrot Settings", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
+	ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_Once);
+	ImGui::Begin("Mandelbrot Settings", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
 	ImGui::SliderInt(" Max Iterations", &mandelbrotAttribs.maxIterations, 50, 1000);
 	ImGui::SliderFloat(" Brightness", &mandelbrotAttribs.brightness, 50.0f, 1000.0f);
 	ImGui::Text("Zoom: %.10f", mandelbrotAttribs.zoom);
@@ -283,6 +279,7 @@ void Renderer::drawMandelbrotSettings(SetAttributes& mandelbrotAttribs, bool& re
 	ImGui::Checkbox("Show grid: ", &renderGrid);
 	if (ImGui::Checkbox("Show Julia Set: ", &renderJuliaSet))
 	{
+		ImGui::SetWindowPos(ImVec2(width * (1 + mandelbrotAttribs.side) / 4 * renderJuliaSet + 60, 60));
 		mandelbrotAttribs.maxZoom = (3.0f * (1.0f + renderJuliaSet));
 		mandelbrotAttribs.enforceMaxZoom();
 		int width, height;
@@ -296,8 +293,8 @@ void Renderer::drawMandelbrotSettings(SetAttributes& mandelbrotAttribs, bool& re
 // Draw the ImGui settings for the julia set
 void Renderer::drawJuliaSettings(SetAttributes &juliaAttribs, int width)
 {
-	ImGui::SetNextWindowPos(ImVec2(width * (1 + juliaAttribs.side) / 4 + 60, 60));
-	ImGui::Begin("Julia Settings", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove);
+	ImGui::SetNextWindowPos(ImVec2(width * (1 + juliaAttribs.side) / 4 + 60, 60), ImGuiCond_Once);
+	ImGui::Begin("Julia Settings", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
 	ImGui::SliderInt(" Max Iterations", &juliaAttribs.maxIterations, 50, 1000);
 	ImGui::SliderFloat(" Brightness", &juliaAttribs.brightness, 50.0f, 1000.0f);
 	ImGui::Text("Zoom: %.10f", juliaAttribs.zoom);
@@ -315,14 +312,23 @@ void Renderer::drawJuliaSettings(SetAttributes &juliaAttribs, int width)
 }
 
 // Draw the ImGui settings for the marker
-void Renderer::drawMarkerSettings(vec2d& markerPos)
+vec2 Renderer::drawMarkerSettings(vec2d& markerPos, SetAttributes& mandelbrotAttribs, int width)
 {
-	ImGui::Begin("Marker", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
-	ImGui::InputDouble(" ", &markerPos.x);
-	ImGui::SameLine();
-	ImGui::InputDouble(" Marker Position", &markerPos.y);
+	ImGui::SetNextWindowPos(ImVec2(width * (1 + mandelbrotAttribs.side) / 4 + 60, 280), ImGuiCond_Once);
+	ImGui::Begin("Marker Settings", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysAutoResize);
 
+	ImGui::InputDouble(" X", &markerPos.x);
+	ImGui::InputDouble(" Y", &markerPos.y);
+
+	ImGui::Text("Right click, or hover and left click to move the marker.\nThis changes the starting value used to render the julia set (left).");
+
+	ImVec2 windowPos = ImGui::GetCursorScreenPos();
+	ImVec2 windowDims = ImGui::GetContentRegionAvail();
+	ImVec2 windowCenter = ImVec2(windowPos.x + 0.5f * windowDims.x, windowPos.y + 0.5f * windowDims.y);
 	ImGui::End();
+
+	return vec2(windowCenter.x, windowCenter.y);
+
 }
 
 // Draw the FPS counter
