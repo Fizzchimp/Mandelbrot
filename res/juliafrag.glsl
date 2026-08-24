@@ -25,7 +25,7 @@ void main()
     for (int i = 0; i < u_maxIterations; i++)
     {
         z = squareImaginary(z) + u_startingPos;
-        if (length(z) > 10.0)
+        if (length(z) > 2.0)
         {
             colour = vec4(float(i) / u_brightness, float(i) / u_brightness * 2, float(i) / u_brightness * 4 + 0.2, 1.0);
             return;
