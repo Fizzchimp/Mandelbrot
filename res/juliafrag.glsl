@@ -20,7 +20,7 @@ void main()
 {
     // Scale the fragment position based on zoom
     vec2 scaledPos = fragPos.xy * u_zoom + u_center;
-    vec2 z = scaledPos.xy;
+    vec2 z = scaledPos;
     colour = vec4(0.0, 0.0, 0.0, 1.0); // Set the colour to black if it didn't escape
     for (int i = 0; i < u_maxIterations; i++)
     {
