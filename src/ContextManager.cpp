@@ -3,6 +3,7 @@
 // Constructor with the window dimensions
 ContextManager::ContextManager(int& width, int& height)
 {
+    glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
     // Initialize the library
     if (!glfwInit())
     {
